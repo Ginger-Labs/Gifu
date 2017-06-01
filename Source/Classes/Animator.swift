@@ -2,18 +2,20 @@
 public class Animator {
     
     /// Total duration of one animation loop
-    var loopDuration: TimeInterval {
+    public var loopDuration: TimeInterval {
         return frameStore?.loopDuration ?? 0
     }
     
+    
+    
     /// Number of frame to buffer.
-    var frameBufferCount = 50
+    public var frameBufferCount = 50
     
     /// Specifies whether GIF frames should be resized.
-    var shouldResizeFrames = false
+    public var shouldResizeFrames = false
     
     /// Responsible for loading individual frames and resizing them if necessary.
-    var frameStore: FrameStore?
+    public var frameStore: FrameStore?
     
     /// Tracks whether the display link is initialized.
     private var displayLinkInitialized: Bool = false
@@ -27,26 +29,28 @@ public class Animator {
         }()
     
     /// Introspect whether the `displayLink` is paused.
-    var isAnimating: Bool {
-        return !displayLink.isPaused
-    }
+    private(set) public var isAnimating = false
     
     /// Total frame count of the GIF.
-    var frameCount: Int {
+    public var frameCount: Int {
         return frameStore?.frameCount ?? 0
     }
     
     /// Gets the current image from the frame store.
     ///
     /// - returns: An optional frame image to display.
-    var currentFrame : UIImage? {
+    public var currentFrame : UIImage? {
         return frameStore?.currentFrameImage
     }
     
-    private let onNewFrame : (UIImage) -> ()
+    public var onNewFrame : ((UIImage) -> ())?
+    
+    public var size : CGSize? {
+        return frameStore?.size
+    }
     
     /// Creates a new animator
-    public init(onNewFrame : @escaping (UIImage) -> ()) {
+    public init(onNewFrame : ((UIImage) -> ())? = nil) {
         self.onNewFrame = onNewFrame
     }
     
@@ -60,7 +64,7 @@ public class Animator {
         
         store.shouldChangeFrame(with: displayLink.duration) {
             if $0, let currentFrame = currentFrame {
-                onNewFrame(currentFrame)
+                onNewFrame?(currentFrame)
             }
         }
     }
@@ -91,13 +95,6 @@ public class Animator {
         frameStore = FrameStore(data: imageData, size: size, contentMode: contentMode, framePreloadCount: frameBufferCount, loopCount: loopCount)
         frameStore?.shouldResizeFrames = shouldResizeFrames
         frameStore?.prepareFrames(completionHandler)
-        attachDisplayLink()
-    }
-    
-    
-    /// Add the display link to the main run loop.
-    private func attachDisplayLink() {
-        displayLink.add(to: .main, forMode: RunLoopMode.commonModes)
     }
     
     deinit {
@@ -107,15 +104,21 @@ public class Animator {
     }
     
     /// Start animating.
-    func startAnimating() {
-        if frameStore?.isAnimatable ?? false {
+    public func startAnimating() {
+        if frameStore?.isAnimatable ?? false, !isAnimating {
+            displayLink.add(to: .main, forMode: RunLoopMode.commonModes)
             displayLink.isPaused = false
+            isAnimating = true
         }
     }
     
     /// Stop animating.
-    func stopAnimating() {
-        displayLink.isPaused = true
+    public func stopAnimating() {
+        if isAnimating {
+            displayLink.isPaused = true
+            displayLink.remove(from: .main, forMode: RunLoopMode.commonModes)
+            isAnimating = false
+        }
     }
     
     /// Prepare for animation and start animating immediately.
@@ -124,7 +127,7 @@ public class Animator {
     /// - parameter size: The target size of the individual frames.
     /// - parameter contentMode: The view content mode to use for the individual frames.
     /// - parameter loopCount: Desired number of loops, <= 0 for infinite loop.
-    func animate(withGIFNamed imageName: String, size: CGSize, contentMode: UIViewContentMode, loopCount: Int = 0) {
+    public func animate(withGIFNamed imageName: String, size: CGSize, contentMode: UIViewContentMode, loopCount: Int = 0) {
         prepareForAnimation(withGIFNamed: imageName, size: size, contentMode: contentMode, loopCount: loopCount)
         startAnimating()
     }
@@ -135,13 +138,13 @@ public class Animator {
     /// - parameter size: The target size of the individual frames.
     /// - parameter contentMode: The view content mode to use for the individual frames.
     /// - parameter loopCount: Desired number of loops, <= 0 for infinite loop.
-    func animate(withGIFData imageData: Data, size: CGSize, contentMode: UIViewContentMode, loopCount: Int = 0) {
+    public func animate(withGIFData imageData: Data, size: CGSize, contentMode: UIViewContentMode, loopCount: Int = 0) {
         prepareForAnimation(withGIFData: imageData, size: size, contentMode: contentMode, loopCount: loopCount)
         startAnimating()
     }
     
     /// Stop animating and nullify the frame store.
-    func prepareForReuse() {
+    public func prepareForReuse() {
         stopAnimating()
         frameStore = nil
     }

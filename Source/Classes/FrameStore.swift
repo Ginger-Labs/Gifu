@@ -1,7 +1,7 @@
 import ImageIO
 
 /// Responsible for storing and updating the frames of a single GIF.
-class FrameStore {
+public class FrameStore {
     
     /// Total duration of one animation loop
     var loopDuration: TimeInterval = 0

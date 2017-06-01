@@ -6,24 +6,16 @@ private let imageData = testImageDataNamed("mugen.gif")
 private let staticImage = UIImage(data: imageData)!
 private let preloadFrameCount = 20
 
-class DummyAnimatable: GIFAnimatable {
-    init() {}
-    var animator: Animator? = nil
-    var image: UIImage? = nil
-    var layer = CALayer()
-    var frame: CGRect = .zero
-    var contentMode: UIViewContentMode = .scaleToFill
-    func animatorHasNewFrame() {}
-}
+
 
 class GifuTests: XCTestCase {
     var animator: Animator!
     var originalFrameCount: Int!
-    let delegate = DummyAnimatable()
     
     override func setUp() {
         super.setUp()
-        animator = Animator(withDelegate: delegate)
+        animator = Animator() { ( frame : UIImage) -> () in
+        }
         animator.prepareForAnimation(withGIFData: imageData, size: staticImage.size, contentMode: .scaleToFill)
         originalFrameCount = 44
     }
@@ -88,6 +80,20 @@ class GifuTests: XCTestCase {
                 print("Error: \(error.localizedDescription)")
             }
         }
+    }
+    
+    func testMetadata() {
+        let options = [String(kCGImageSourceShouldCache): kCFBooleanFalse] as CFDictionary
+        let imageSource = CGImageSourceCreateWithData(imageData as CFData, options) ?? CGImageSourceCreateIncremental(options)
+        
+        let sourceProps = CGImageSourceCopyProperties(imageSource, nil) as? [String : Any]
+        print("\(sourceProps)")
+        
+        let frameMetadata = CGImageSourceCopyMetadataAtIndex(imageSource, 0, nil) as? [String : Any]
+        print("\(frameMetadata)")
+        
+        let frameProps = CGImageSourceCopyPropertiesAtIndex(imageSource, 0, nil)
+        print("\(frameProps)")
     }
 }
 
